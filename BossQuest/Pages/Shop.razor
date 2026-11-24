@@ -1,0 +1,254 @@
+@page "/shop"
+@inject GameState Game
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>BossQuest - The Tavern & Armory</PageTitle>
+
+<div class="min-h-screen bg-slate-950 p-6 text-white">
+    <!-- Top Navigation -->
+    <div class="max-w-6xl mx-auto flex items-center justify-between pb-6 border-b border-slate-800">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">🏰</span>
+            <div>
+                <h1 class="text-2xl font-black bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
+                    The Tavern & Armory
+                </h1>
+                <p class="text-xs text-slate-400">Equip gear for upcoming exam battles and purchase survival consumables</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <!-- Gold Display -->
+            <div class="flex items-center gap-2 bg-slate-900 border border-amber-500/40 rounded-xl px-4 py-2 shadow-lg shadow-amber-500/10">
+                <span class="text-xl">💰</span>
+                <div>
+                    <span class="text-[10px] text-slate-400 uppercase font-semibold block">Available Gold</span>
+                    <span id="textviewShopGold" class="text-lg font-mono font-bold text-amber-400">
+                        @Game.CurrentUser.Gold
+                    </span>
+                </div>
+            </div>
+
+            <!-- Back to Dashboard -->
+            <a href="/" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition flex items-center gap-1.5 shadow-md">
+                <span>⚔️</span> Back to Arena
+            </a>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto mt-6 space-y-8">
+        <!-- Category Filter Tabs -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-2">
+            <button id="tabShopAll"
+                    @onclick='() => activeCategory = "all"'
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 @(activeCategory == "all" ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25" : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-white")">
+                <span>✨</span> All Items
+            </button>
+            <button id="tabShopWeapons"
+                    @onclick='() => activeCategory = "weapon"'
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 @(activeCategory == "weapon" ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25" : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-white")">
+                <span>🗡️</span> Weapons
+            </button>
+            <button id="tabShopArmor"
+                    @onclick='() => activeCategory = "armor"'
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 @(activeCategory == "armor" ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25" : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-white")">
+                <span>🛡️</span> Armor
+            </button>
+            <button id="tabShopHelmets"
+                    @onclick='() => activeCategory = "helmet"'
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 @(activeCategory == "helmet" ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25" : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-white")">
+                <span>⛑️</span> Helmets
+            </button>
+            <button id="tabShopPotions"
+                    @onclick='() => activeCategory = "potion"'
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 @(activeCategory == "potion" ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25" : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-white")">
+                <span>🧪</span> Potions & Scrolls
+            </button>
+            <button id="tabShopShields"
+                    @onclick='() => activeCategory = "shield"'
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 @(activeCategory == "shield" ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25" : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-white")">
+                <span>🔰</span> Shields & Charms
+            </button>
+            <button id="tabShopCosmetics"
+                    @onclick='() => activeCategory = "cosmetic"'
+                    class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 @(activeCategory == "cosmetic" ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25" : "bg-slate-900 text-slate-400 border border-slate-800 hover:text-white")">
+                <span>✨</span> Cosmetics
+            </button>
+        </div>
+
+        <!-- Shop Catalog Grid -->
+        <div>
+            <h2 class="text-base font-bold text-slate-300 mb-3 flex items-center gap-2">
+                <span>🛒</span> Available Merchandise
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @foreach (var item in FilteredItems)
+                {
+                    var canAfford = Game.CurrentUser.Gold >= item.GoldCost;
+                    var meetsLevel = Game.CurrentUser.Level >= item.RequiredLevel;
+                    var alreadyOwned = !item.IsConsumable && Game.Inventory.Any(i => i.ItemId == item.Id);
+                    var cleanName = item.Name.Replace(" ", "").Replace("'", "");
+
+                    <div class="bg-slate-900/80 rounded-2xl border border-slate-800 hover:border-slate-700 p-5 flex flex-col justify-between transition shadow-lg">
+                        <div>
+                            <div class="flex items-start justify-between mb-3">
+                                <span class="text-3xl p-2 rounded-xl bg-slate-800/80 border border-slate-700/60">
+                                    @item.CategoryIcon
+                                </span>
+                                <div class="flex items-center gap-1.5">
+                                    @if (item.IsConsumable)
+                                    {
+                                        <span class="text-[10px] bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 px-2 py-0.5 rounded-full font-semibold">
+                                            Consumable
+                                        </span>
+                                    }
+                                    <span class="text-[10px] bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-full font-semibold">
+                                        Req. Lv.@item.RequiredLevel
+                                    </span>
+                                </div>
+                            </div>
+
+                            <h3 class="text-sm font-bold text-white">@item.Name</h3>
+                            <p class="text-xs text-slate-400 mt-1 line-clamp-2">@item.Description</p>
+
+                            <!-- Stat Bonuses -->
+                            @if (item.StatBonus.Any())
+                            {
+                                <div class="flex flex-wrap gap-1.5 mt-3">
+                                    @foreach (var bonus in item.StatBonus)
+                                    {
+                                        <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-purple-950/40 border border-purple-500/30 text-purple-300">
+                                            +@bonus.Value @bonus.Key.Replace("_", " ").ToUpper()
+                                        </span>
+                                    }
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Price and Buy Button -->
+                        <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
+                            <div class="flex items-center gap-1 text-sm font-mono font-bold text-amber-400">
+                                <span>💰</span> @(item.GoldCost == 0 ? "Free" : $"{item.GoldCost} Gold")
+                            </div>
+
+                            <button id="@($"buttonBuyItem_{cleanName}")"
+                                    @onclick="() => Game.PurchaseItem(item.Id)"
+                                    disabled="@(!canAfford || !meetsLevel || alreadyOwned)"
+                                    class="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 @(alreadyOwned ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed" : (!meetsLevel ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed" : (!canAfford ? "bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed" : "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 shadow-md shadow-amber-500/20")))">
+                                @if (alreadyOwned)
+                                {
+                                    <span>Owned ✓</span>
+                                }
+                                else if (!meetsLevel)
+                                {
+                                    <span>Lv.@item.RequiredLevel Needed</span>
+                                }
+                                else if (!canAfford)
+                                {
+                                    <span>Need More Gold</span>
+                                }
+                                else
+                                {
+                                    <span>Purchase</span>
+                                }
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Player Inventory -->
+        <div class="pt-6 border-t border-slate-800">
+            <h2 class="text-base font-bold text-slate-300 mb-3 flex items-center gap-2">
+                <span>🎒</span> Your Adventurer Backpack (@Game.Inventory.Count items)
+            </h2>
+
+            @if (!Game.Inventory.Any())
+            {
+                <div class="bg-slate-900/60 rounded-2xl border border-slate-800 p-8 text-center">
+                    <span class="text-4xl mb-2 block">📭</span>
+                    <p class="text-sm font-bold text-white">Your backpack is empty!</p>
+                    <p class="text-xs text-slate-500 mt-1">Complete quests and Pomodoro focus raids to earn gold and purchase items above.</p>
+                </div>
+            }
+            else
+            {
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                    @foreach (var inv in Game.Inventory)
+                    {
+                        var itm = inv.Item;
+                        if (itm == null) continue;
+                        var cleanName = itm.Name.Replace(" ", "").Replace("'", "");
+
+                        <div class="bg-slate-900/70 rounded-xl border p-3.5 flex flex-col justify-between transition @(inv.IsEquipped ? "border-purple-500 ring-2 ring-purple-500/20 bg-purple-950/20" : "border-slate-800")">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-2xl">@itm.CategoryIcon</span>
+                                    @if (itm.IsConsumable)
+                                    {
+                                        <span class="text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700 px-2 py-0.5 rounded-full">
+                                            Qty: @inv.Quantity
+                                        </span>
+                                    }
+                                    else if (inv.IsEquipped)
+                                    {
+                                        <span class="text-[10px] font-bold bg-purple-600 text-white px-2 py-0.5 rounded-full">
+                                            EQUIPPED
+                                        </span>
+                                    }
+                                </div>
+
+                                <h4 class="text-xs font-bold text-white">@itm.Name</h4>
+                                <p class="text-[11px] text-slate-400 mt-0.5 line-clamp-1">@itm.Description</p>
+                            </div>
+
+                            <div class="mt-3 pt-2 border-t border-slate-800">
+                                @if (itm.IsConsumable)
+                                {
+                                    <button id="@($"buttonUseItem_{cleanName}")"
+                                            @onclick="() => Game.EquipItem(inv.Id)"
+                                            class="w-full py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition">
+                                        Use Item
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button id="@($"buttonEquipItem_{cleanName}")"
+                                            @onclick="() => Game.EquipItem(inv.Id)"
+                                            class="w-full py-1.5 rounded-lg text-xs font-bold transition @(inv.IsEquipped ? "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" : "bg-purple-600 hover:bg-purple-500 text-white")">
+                                        @(inv.IsEquipped ? "Unequip" : "Equip")
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string activeCategory = "all";
+
+    private IEnumerable<ShopItem> FilteredItems =>
+        Game.ShopItems.Where(i => activeCategory == "all" || i.Category.Equals(activeCategory, StringComparison.OrdinalIgnoreCase));
+
+    protected override void OnInitialized()
+    {
+        Game.OnStateChanged += HandleStateChanged;
+    }
+
+    private void HandleStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Game.OnStateChanged -= HandleStateChanged;
+    }
+}

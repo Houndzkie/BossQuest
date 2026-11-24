@@ -1,0 +1,84 @@
+@inject GameState Game
+
+<div class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+        <!-- Header -->
+        <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span>📖</span> Boss Bestiary
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">
+                    Select a boss encounter. HP scales by +25% per additional party member (@(Game.CurrentParty?.Members.Count ?? 1) members active).
+                </p>
+            </div>
+            <button @onclick="() => OnClose.InvokeAsync()" class="text-slate-400 hover:text-white text-lg">
+                ✕
+            </button>
+        </div>
+
+        <!-- Boss Grid -->
+        <div class="flex-1 overflow-y-auto p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+            @foreach (var boss in Game.Bosses)
+            {
+                var partySize = Game.CurrentParty?.Members.Count ?? 1;
+                var scaledHp = (int)(boss.BaseHp * (1 + 0.25 * (partySize - 1)));
+                var isLegendary = boss.Tier == "Legendary";
+                var isCurrent = Game.ActiveEncounter?.BossId == boss.Id && !Game.ActiveEncounter.IsDefeated;
+
+                <div class="bg-slate-800/60 rounded-xl p-4 border transition flex flex-col justify-between @(isCurrent ? "border-purple-500 ring-2 ring-purple-500/30" : (isLegendary ? "border-yellow-500/40 hover:border-yellow-400" : "border-slate-700/70 hover:border-slate-500"))">
+                    <div>
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <span class="text-3xl">@boss.BossEmoji</span>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full font-bold border @boss.TierColor">
+                                @boss.Tier
+                            </span>
+                        </div>
+
+                        <h4 class="font-bold text-white text-sm">@boss.Name</h4>
+                        <p class="text-xs text-slate-400 mt-1 line-clamp-2">
+                            @boss.Description
+                        </p>
+
+                        <!-- Stats -->
+                        <div class="grid grid-cols-2 gap-2 mt-3 text-xs bg-slate-900/60 rounded-lg p-2 border border-slate-800">
+                            <div>
+                                <span class="text-slate-500 block text-[10px]">HEALTH</span>
+                                <span class="font-bold text-red-400 font-mono">@scaledHp HP</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block text-[10px]">ATTACK</span>
+                                <span class="font-bold text-amber-400 font-mono">@boss.Attack DMG</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block text-[10px]">XP BOUNTY</span>
+                                <span class="font-bold text-purple-400 font-mono">+@boss.XpReward XP</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block text-[10px]">GOLD REWARD</span>
+                                <span class="font-bold text-yellow-400 font-mono">+@boss.GoldReward Gold</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="@($"buttonSelectBoss_{boss.Name.Replace(" ", "").Replace("'", "")}")"
+                            @onclick="() => SelectBoss(boss.Id)"
+                            disabled="@isCurrent"
+                            class="mt-4 w-full py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 @(isCurrent ? "bg-slate-700 text-slate-400 cursor-not-allowed" : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-md shadow-purple-600/30")">
+                        @(isCurrent ? "Currently Fighting" : "⚔️ Challenge Boss")
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private async Task SelectBoss(Guid bossId)
+    {
+        Game.SelectBoss(bossId);
+        await OnClose.InvokeAsync();
+    }
+}

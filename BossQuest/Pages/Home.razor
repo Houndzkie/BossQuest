@@ -1,0 +1,91 @@
+@page "/"
+@inject GameState Game
+@inject TimerService Timer
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>BossQuest - Command Center</PageTitle>
+
+<div class="min-h-screen bg-slate-950 text-white flex flex-col">
+    <!-- Top Navigation Bar -->
+    <header class="px-6 py-3.5 bg-slate-900/80 border-b border-slate-800/80 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between">
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+            <span class="text-2xl">⚔️</span>
+            <div>
+                <h1 class="text-xl font-black bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent leading-none">
+                    BossQuest
+                </h1>
+                <span class="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">
+                    Student Co-op RPG
+                </span>
+            </div>
+        </div>
+
+        <!-- Center Active Quest Status Pill -->
+        <div class="hidden md:flex items-center gap-3 bg-slate-800/60 border border-slate-700/60 rounded-full px-4 py-1.5 text-xs">
+            <span class="text-amber-400 font-bold flex items-center gap-1">
+                <span>🛡️</span> Party: @(Game.CurrentParty?.Name ?? "Solo Adventurer")
+            </span>
+            <span class="text-slate-600">•</span>
+            <span class="text-rose-400 font-bold flex items-center gap-1">
+                <span>👾</span> Active Boss: @(Game.ActiveEncounter?.Boss?.Name ?? "None")
+            </span>
+        </div>
+
+        <!-- Right Quick Actions -->
+        <div class="flex items-center gap-3">
+            <a href="/shop"
+               id="buttonOpenShop"
+               class="px-4 py-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 hover:from-amber-500/30 hover:to-yellow-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                <span>🏰</span> Tavern & Shop (@Game.CurrentUser.Gold G)
+            </a>
+
+            <a href="/auth"
+               id="buttonLogout"
+               class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold transition">
+                Logout
+            </a>
+        </div>
+    </header>
+
+    <!-- Main 3-Column Command Dashboard -->
+    <main class="flex-1 p-4 md:p-6 max-w-[1720px] mx-auto w-full">
+        <div class="grid grid-cols-1 lg:grid-cols-[330px_1fr_400px] gap-5 items-start">
+            <!-- Left Column: Character Sheet + Pomodoro Focus Raid Timer -->
+            <div class="space-y-5">
+                <CharacterCard />
+                <PomodoroTimer />
+            </div>
+
+            <!-- Center Column: Task Board (Dailies & Quests) -->
+            <div>
+                <TaskBoard />
+            </div>
+
+            <!-- Right Column: Active Boss Arena & Realtime Party Combat Feed -->
+            <div>
+                <BossArena />
+            </div>
+        </div>
+    </main>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Game.OnStateChanged += HandleStateChanged;
+        Timer.OnTick += HandleStateChanged;
+    }
+
+    private void HandleStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Game.OnStateChanged -= HandleStateChanged;
+        Timer.OnTick -= HandleStateChanged;
+    }
+}

@@ -1,0 +1,91 @@
+@inject GameState Game
+
+<div class="bg-slate-800/50 hover:bg-slate-800/80 rounded-xl p-3.5 border border-slate-700/60 transition-all flex items-start gap-3.5 group @(Task.IsCompleted ? "opacity-50" : "")">
+    <!-- Completion Checkbox / Button -->
+    <button id="@($"buttonCompleteTask_{Task.Id.ToString()[..8]}")"
+            @onclick="() => OnComplete.InvokeAsync(Task.Id)"
+            disabled="@Task.IsCompleted"
+            class="mt-0.5 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 @(Task.IsCompleted ? "bg-emerald-500 text-white cursor-default" : "border-2 border-slate-500 hover:border-emerald-400 hover:bg-emerald-500/20")">
+        @if (Task.IsCompleted)
+        {
+            <span class="text-xs font-bold">✓</span>
+        }
+    </button>
+
+    <!-- Center Task Info -->
+    <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+            <h4 class="text-sm font-semibold @(Task.IsCompleted ? "line-through text-slate-400" : "text-white") truncate">
+                @Task.Title
+            </h4>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(Task.Description))
+        {
+            <p class="text-xs text-slate-400 mt-0.5 line-clamp-1">
+                @Task.Description
+            </p>
+        }
+
+        <!-- Badges row -->
+        <div class="flex items-center gap-2 mt-2 flex-wrap text-[11px]">
+            <!-- Difficulty Badge -->
+            <span class="px-2 py-0.5 rounded-md font-semibold border @Task.DifficultyColor">
+                @Task.DifficultyLabel (@Game.CalculateDamage(Task.Difficulty) DMG)
+            </span>
+
+            <!-- Course Label -->
+            @if (!string.IsNullOrWhiteSpace(Task.CourseLabel))
+            {
+                <span class="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/30 font-medium">
+                    📚 @Task.CourseLabel
+                </span>
+            }
+
+            <!-- Streak for Dailies -->
+            @if (Task.TaskType == TaskType.Daily && Task.StreakCount > 0)
+            {
+                <span class="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/30 font-medium">
+                    🔥 @Task.StreakCount streak
+                </span>
+            }
+
+            <!-- Due Date for Quests -->
+            @if (Task.TaskType == TaskType.Quest && Task.DueDate.HasValue)
+            {
+                var isOverdue = Task.DueDate.Value < DateTime.UtcNow && !Task.IsCompleted;
+                <span class="px-2 py-0.5 rounded-md @(isOverdue ? "bg-red-500/20 text-red-300 border border-red-500/40" : "bg-slate-800 text-slate-400 border border-slate-700")">
+                    📅 @(Task.DueDate.Value.ToString("MMM dd, yyyy"))
+                </span>
+            }
+
+            <!-- Reward preview -->
+            <span class="text-slate-500">
+                +@Game.CalculateXp(Task.Difficulty) XP • +@Game.CalculateGold(Task.Difficulty) Gold
+            </span>
+        </div>
+    </div>
+
+    <!-- Action Buttons (visible on hover) -->
+    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button id="@($"buttonEditTask_{Task.Id.ToString()[..8]}")"
+                @onclick="() => OnEdit.InvokeAsync(Task)"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-purple-300 hover:bg-slate-700/80 transition"
+                title="Edit Task">
+            ✏️
+        </button>
+        <button id="@($"buttonDeleteTask_{Task.Id.ToString()[..8]}")"
+                @onclick="() => OnDelete.InvokeAsync(Task.Id)"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-700/80 transition"
+                title="Delete Task">
+            🗑️
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public TaskItem Task { get; set; } = new();
+    [Parameter] public EventCallback<Guid> OnComplete { get; set; }
+    [Parameter] public EventCallback<TaskItem> OnEdit { get; set; }
+    [Parameter] public EventCallback<Guid> OnDelete { get; set; }
+}

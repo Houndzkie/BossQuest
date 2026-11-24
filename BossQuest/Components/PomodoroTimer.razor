@@ -1,0 +1,184 @@
+@inject TimerService Timer
+@inject GameState Game
+@implements IDisposable
+
+<div class="bg-slate-900/90 rounded-2xl border border-slate-700/80 p-5 shadow-xl backdrop-blur-sm relative overflow-hidden">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+            <span class="text-xl">⚡</span>
+            <div>
+                <h3 class="font-bold text-white text-sm">Focus Raid</h3>
+                <p class="text-[11px] text-slate-400">Pomodoro Study Strike</p>
+            </div>
+        </div>
+
+        <span class="text-xs px-2.5 py-0.5 rounded-full font-semibold border @(Timer.IsBreak ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/40" : (Timer.IsRunning ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40 animate-pulse" : "bg-slate-800 text-slate-400 border-slate-700"))">
+            @Timer.SessionType Mode
+        </span>
+    </div>
+
+    <!-- Circular Timer Progress Display -->
+    <div class="flex flex-col items-center justify-center my-3 relative">
+        <div class="relative w-40 h-40 flex items-center justify-center">
+            <!-- SVG Progress Ring -->
+            <svg class="w-full h-full transform -rotate-90">
+                <circle cx="80" cy="80" r="70"
+                        stroke="currentColor" stroke-width="8"
+                        class="text-slate-800" fill="transparent" />
+                <circle cx="80" cy="80" r="70"
+                        stroke="currentColor" stroke-width="8"
+                        stroke-dasharray="440"
+                        stroke-dashoffset="@(440 - (440 * (Timer.ProgressPercent / 100)))"
+                        stroke-linecap="round"
+                        class="@(Timer.IsBreak ? "text-cyan-400" : "text-emerald-500") transition-all duration-500"
+                        fill="transparent" />
+            </svg>
+
+            <!-- Center Countdown -->
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span id="textviewTimer" class="text-3xl font-mono font-black tracking-wider @(Timer.IsBreak ? "text-cyan-400" : (Timer.IsRunning ? "text-emerald-400" : "text-slate-200"))">
+                    @(Timer.IsRunning || Timer.IsPaused ? Timer.TimeDisplay : $"{selectedDuration:D2}:00")
+                </span>
+                <span class="text-[11px] text-slate-400 mt-1 max-w-[100px] truncate">
+                    @(string.IsNullOrWhiteSpace(Timer.CurrentSubject) ? (string.IsNullOrWhiteSpace(studySubject) ? "Deep Focus" : studySubject) : Timer.CurrentSubject)
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Setup Controls (when not running) -->
+    @if (!Timer.IsRunning && !Timer.IsPaused)
+    {
+        <div class="space-y-3 mt-2">
+            <!-- Subject Input -->
+            <div>
+                <label class="block text-[11px] text-slate-400 font-semibold mb-1 uppercase tracking-wider">
+                    Study Subject / Goal
+                </label>
+                <input id="edittextFocusSubject"
+                       type="text"
+                       @bind="studySubject"
+                       placeholder="e.g., Automata Ch. 3 or Calculus Drills"
+                       class="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-transparent transition" />
+            </div>
+
+            <!-- Duration Selector -->
+            <div>
+                <label class="block text-[11px] text-slate-400 font-semibold mb-1 uppercase tracking-wider">
+                    Preset Duration
+                </label>
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="buttonTimer25"
+                            type="button"
+                            @onclick="() => SelectDuration(25)"
+                            class="py-2 rounded-xl text-xs font-semibold border transition flex items-center justify-center gap-1 @(selectedDuration == 25 ? "bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-600/20" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700")">
+                        <span>⏱️</span> 25m Focus / 5m Break
+                    </button>
+                    <button id="buttonTimer50"
+                            type="button"
+                            @onclick="() => SelectDuration(50)"
+                            class="py-2 rounded-xl text-xs font-semibold border transition flex items-center justify-center gap-1 @(selectedDuration == 50 ? "bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-600/20" : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700")">
+                        <span>🔥</span> 50m Focus / 10m Break
+                    </button>
+                </div>
+            </div>
+
+            <!-- Damage Preview Notice -->
+            <div class="bg-amber-950/30 border border-amber-500/30 rounded-xl p-2.5 text-center">
+                <span class="text-xs text-amber-300 font-semibold flex items-center justify-center gap-1.5">
+                    <span>⚡</span> Critical Strike on completion:
+                    <strong class="text-amber-200">~@(selectedDuration >= 50 ? 65 : 35) DMG</strong>
+                    <span>+ MP Recovery</span>
+                </span>
+            </div>
+
+            <!-- Start Button -->
+            <button id="buttonStartFocus"
+                    @onclick="StartFocus"
+                    class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition transform active:scale-95 flex items-center justify-center gap-2 text-sm">
+                <span>⚔️</span> Initiate Focus Raid
+            </button>
+        </div>
+    }
+    else
+    {
+        <!-- In-Session Controls -->
+        <div class="space-y-3 mt-2">
+            <div class="flex gap-2">
+                @if (Timer.IsPaused)
+                {
+                    <button id="buttonResumeFocus"
+                            @onclick="() => Timer.Resume()"
+                            class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20">
+                        <span>▶️</span> Resume
+                    </button>
+                }
+                else
+                {
+                    <button id="buttonPauseFocus"
+                            @onclick="() => Timer.Pause()"
+                            class="flex-1 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/20">
+                        <span>⏸️</span> Pause
+                    </button>
+                }
+
+                <button id="buttonStopFocus"
+                        @onclick="StopFocus"
+                        class="py-2.5 px-4 bg-slate-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-500/40 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1">
+                    <span>⏹️</span> Abort
+                </button>
+            </div>
+
+            <!-- In-progress encouragement -->
+            <div class="text-center text-[11px] text-slate-400">
+                @(Timer.IsBreak ? "☕ Rest your eyes, stretch, and hydrate!" : "🛡️ Stay in the zone! Boss takes Critical Damage when timer hits 0!")
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private int selectedDuration = 25;
+    private string studySubject = "";
+
+    protected override void OnInitialized()
+    {
+        Timer.OnTick += HandleTick;
+        Timer.OnFocusCompleted += HandleFocusCompleted;
+    }
+
+    private void SelectDuration(int mins)
+    {
+        selectedDuration = mins;
+    }
+
+    private void StartFocus()
+    {
+        Game.StartFocusSession(selectedDuration, studySubject);
+        Timer.Start(selectedDuration, studySubject);
+    }
+
+    private void StopFocus()
+    {
+        Timer.Stop();
+        Game.ActiveFocusSession = null;
+    }
+
+    private void HandleTick()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void HandleFocusCompleted()
+    {
+        Game.CompleteFocusSession();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Timer.OnTick -= HandleTick;
+        Timer.OnFocusCompleted -= HandleFocusCompleted;
+    }
+}

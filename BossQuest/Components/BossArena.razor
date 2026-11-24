@@ -1,0 +1,209 @@
+@inject GameState Game
+@implements IDisposable
+
+<div class="bg-slate-900/90 rounded-2xl border border-slate-700/80 shadow-xl backdrop-blur-sm flex flex-col h-[calc(100vh-100px)] min-h-[640px] overflow-hidden">
+    <!-- Arena Header -->
+    <div class="p-4 bg-slate-800/40 border-b border-slate-700/70 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <span class="text-xl">⚔️</span>
+            <div>
+                <h3 class="font-bold text-white text-sm">Boss Arena</h3>
+                <p class="text-[11px] text-slate-400">Co-op Raid Encounter</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="buttonOpenParty"
+                    @onclick="() => showPartyModal = true"
+                    class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                <span>🛡️</span> Party Lobby
+            </button>
+            <button id="buttonOpenBestiary"
+                    @onclick="() => showBestiaryModal = true"
+                    class="px-2.5 py-1 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/40 rounded-lg text-xs font-semibold transition flex items-center gap-1">
+                <span>📖</span> Bestiary
+            </button>
+        </div>
+    </div>
+
+    @if (Game.ActiveEncounter == null || Game.ActiveEncounter.IsDefeated)
+    {
+        <!-- No Active Boss View -->
+        <div class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <span class="text-6xl mb-4 animate-bounce">🏆</span>
+            <h4 class="text-lg font-bold text-white mb-1">The Battlefield is Clear!</h4>
+            <p class="text-xs text-slate-400 max-w-xs mb-6">
+                Your party has conquered the active boss or hasn't started a raid encounter yet. Pick a monster from the Bestiary to challenge!
+            </p>
+            <button @onclick="() => showBestiaryModal = true"
+                    class="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-purple-600/30 transition flex items-center gap-2">
+                <span>📖</span> Choose Next Boss
+            </button>
+        </div>
+    }
+    else
+    {
+        var encounter = Game.ActiveEncounter;
+        var boss = encounter.Boss!;
+        var isLowHp = encounter.HpPercent < 25;
+
+        <div class="p-4 flex flex-col items-center border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/60 to-slate-950">
+            <!-- Boss Sprite / Avatar -->
+            <div class="relative my-2">
+                <div class="w-24 h-24 rounded-3xl bg-gradient-to-b from-slate-800 to-slate-950 border-2 border-slate-700 flex items-center justify-center text-5xl shadow-2xl @(isLowHp ? "animate-pulse border-red-500/80" : "")">
+                    @boss.BossEmoji
+                </div>
+                <span class="absolute -top-2 -right-2 text-[10px] font-bold px-2 py-0.5 rounded-full border @boss.TierColor">
+                    @boss.Tier
+                </span>
+            </div>
+
+            <!-- Boss Title & Description -->
+            <h4 class="text-base font-black text-white mt-1">@boss.Name</h4>
+            <p class="text-[11px] text-slate-400 italic text-center max-w-xs mt-0.5">
+                @boss.Description
+            </p>
+
+            <!-- Giant Boss HP Bar -->
+            <div class="w-full mt-3">
+                <div class="flex justify-between items-center text-xs mb-1">
+                    <span class="font-bold text-red-400 flex items-center gap-1">
+                        <span>🔥</span> Boss Health
+                    </span>
+                    <span id="textviewBossHp" class="font-mono text-xs font-bold text-slate-200">
+                        @encounter.CurrentHp / @encounter.MaxHp HP (@((int)encounter.HpPercent)%)
+                    </span>
+                </div>
+                <div class="h-6 bg-slate-800/90 rounded-xl overflow-hidden p-1 border border-slate-700/80 shadow-inner relative">
+                    <div class="h-full rounded-lg bg-gradient-to-r from-red-700 via-red-600 to-rose-500 transition-all duration-500 @(isLowHp ? "animate-pulse" : "")"
+                         style="width: @(encounter.HpPercent)%">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attack Stat & Retaliation Info -->
+            <div class="w-full mt-3 p-2.5 bg-red-950/20 border border-red-500/20 rounded-xl flex items-center justify-between text-[11px]">
+                <div class="flex items-center gap-1.5 text-amber-300 font-semibold">
+                    <span>⚠️</span> ATK: @boss.Attack DMG
+                </div>
+                <button @onclick="() => Game.SimulateBossAttack()"
+                        class="px-2 py-1 bg-red-900/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 rounded-lg text-[10px] font-bold transition"
+                        title="Simulate daily midnight boss retaliation">
+                    Test Retaliation
+                </button>
+            </div>
+        </div>
+
+        <!-- Party Members Roster -->
+        <div class="p-3 border-b border-slate-800 bg-slate-950/40">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 mb-2">
+                <span class="flex items-center gap-1">
+                    <span>🛡️</span> Party Members (@(Game.CurrentParty?.Members.Count ?? 1)/6)
+                </span>
+                <span class="text-[10px] text-slate-500 font-mono">
+                    Invite: @(Game.CurrentParty?.InviteCode ?? "NONE")
+                </span>
+            </div>
+
+            <div class="space-y-1.5">
+                @if (Game.CurrentParty != null)
+                {
+                    @foreach (var member in Game.CurrentParty.Members)
+                    {
+                        <div class="flex items-center gap-2 text-xs bg-slate-800/40 rounded-lg p-1.5 border border-slate-800">
+                            <span class="text-sm">@member.ClassIcon</span>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between mb-0.5">
+                                    <span class="font-semibold text-slate-200 truncate text-[11px]">
+                                        @member.Username
+                                        @if (member.Id == Game.CurrentUser.Id)
+                                        {
+                                            <span class="text-purple-400 font-normal">(You)</span>
+                                        }
+                                    </span>
+                                    <span id="@($"textviewPartyMemberHp_{member.Username}")" class="text-[10px] font-mono text-slate-400">
+                                        @member.Hp/@member.MaxHp HP
+                                    </span>
+                                </div>
+                                <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-300 @(member.HpPercent < 30 ? "bg-red-500" : (member.HpPercent < 60 ? "bg-amber-400" : "bg-emerald-500"))"
+                                         style="width: @(member.HpPercent)%">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- Live Combat Feed -->
+        <div class="flex-1 flex flex-col p-3 overflow-hidden">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-400 mb-2">
+                <span class="flex items-center gap-1">
+                    <span>📜</span> Live Combat Feed
+                </span>
+                <span class="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Live
+                </span>
+            </div>
+
+            <div id="listCombatLog" class="flex-1 overflow-y-auto space-y-1.5 pr-1">
+                @foreach (var entry in Game.CombatLog.AsEnumerable().Reverse().Take(25))
+                {
+                    <div class="text-[11px] p-2 rounded-lg bg-slate-800/30 border border-slate-800/60 flex items-start gap-2">
+                        <span class="text-sm">@entry.EventIcon</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="@entry.EventColor leading-tight">
+                                @entry.Message
+                            </p>
+                            <span class="text-[9px] text-slate-500 font-mono mt-0.5 block">
+                                @FormatTime(entry.CreatedAt)
+                            </span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<!-- Modals -->
+@if (showBestiaryModal)
+{
+    <BossSelect OnClose="() => showBestiaryModal = false" />
+}
+
+@if (showPartyModal)
+{
+    <PartyPanel OnClose="() => showPartyModal = false" />
+}
+
+@code {
+    private bool showBestiaryModal = false;
+    private bool showPartyModal = false;
+
+    protected override void OnInitialized()
+    {
+        Game.OnStateChanged += HandleStateChanged;
+    }
+
+    private void HandleStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string FormatTime(DateTime dt)
+    {
+        var diff = DateTime.UtcNow - dt;
+        if (diff.TotalSeconds < 60) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        return dt.ToString("MMM dd HH:mm");
+    }
+
+    public void Dispose()
+    {
+        Game.OnStateChanged -= HandleStateChanged;
+    }
+}

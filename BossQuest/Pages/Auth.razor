@@ -1,0 +1,214 @@
+@page "/auth"
+@inject NavigationManager Nav
+
+<PageTitle>BossQuest - Enter the Arena</PageTitle>
+
+<div class="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-white relative overflow-hidden">
+    <!-- Ambient fantasy glows -->
+    <div class="absolute top-1/4 -left-32 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="absolute bottom-1/4 -right-32 w-96 h-96 bg-pink-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <!-- Hero Title & Subtitle -->
+    <div class="text-center mb-8 relative z-10">
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-purple-950/60 border border-purple-500/40 rounded-full text-purple-300 text-xs font-semibold mb-3">
+            <span>✨</span> Student Productivity & Co-op RPG
+        </div>
+
+        <h1 class="text-5xl md:text-6xl font-black tracking-tight bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-transparent mb-2">
+            ⚔️ BossQuest
+        </h1>
+        <p class="text-slate-300 text-base md:text-lg font-medium">
+            Conquer Your Studies. Slay Your Deadlines.
+        </p>
+        <p class="text-slate-500 text-xs mt-1 max-w-md mx-auto">
+            Team up with classmates to defeat academic monsters through daily study habits, assignment quests, and Pomodoro focus raids.
+        </p>
+    </div>
+
+    <!-- Auth Card -->
+    <div class="bg-slate-900/90 rounded-3xl border border-slate-700/80 p-8 w-full max-w-md shadow-2xl backdrop-blur-md relative z-10">
+        <!-- Tab Switcher -->
+        <div class="grid grid-cols-2 p-1 bg-slate-800/80 rounded-2xl border border-slate-700/60 mb-6">
+            <button id="tabLogin"
+                    type="button"
+                    @onclick='() => activeTab = "login"'
+                    class="py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 @(activeTab == "login" ? "bg-purple-600 text-white shadow-md shadow-purple-600/30" : "text-slate-400 hover:text-white")">
+                <span>🔑</span> Enter Arena
+            </button>
+            <button id="tabSignUp"
+                    type="button"
+                    @onclick='() => activeTab = "signup"'
+                    class="py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 @(activeTab == "signup" ? "bg-purple-600 text-white shadow-md shadow-purple-600/30" : "text-slate-400 hover:text-white")">
+                <span>🛡️</span> New Adventurer
+            </button>
+        </div>
+
+        @if (activeTab == "login")
+        {
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Student Email
+                    </label>
+                    <input id="edittextEmail"
+                           type="email"
+                           @bind="loginEmail"
+                           placeholder="helge@cit.edu"
+                           class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Password
+                    </label>
+                    <input id="edittextPassword"
+                           type="password"
+                           @bind="loginPassword"
+                           placeholder="••••••••"
+                           class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50" />
+                </div>
+
+                <div class="pt-2">
+                    <button id="buttonLogin"
+                            type="button"
+                            @onclick="HandleLogin"
+                            class="w-full py-3 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 hover:from-purple-500 hover:to-red-500 text-white font-bold rounded-xl shadow-lg shadow-purple-600/30 transition transform active:scale-95 flex items-center justify-center gap-2 text-sm">
+                        <span>⚔️</span> Enter the Arena
+                    </button>
+                </div>
+
+                <p class="text-[11px] text-slate-500 text-center pt-2">
+                    Demo Mode: Sign in instantly to explore pre-seeded Helge (Lv. 5 Warrior) & party raid.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Hero Username
+                    </label>
+                    <input id="edittextUsername"
+                           type="text"
+                           @bind="signupUsername"
+                           placeholder="e.g. CodePaladin"
+                           class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Student Email
+                    </label>
+                    <input id="edittextSignupEmail"
+                           type="email"
+                           @bind="signupEmail"
+                           placeholder="adventurer@cit.edu"
+                           class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Password
+                    </label>
+                    <input id="edittextSignupPassword"
+                           type="password"
+                           @bind="signupPassword"
+                           placeholder="••••••••"
+                           class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Confirm Password
+                    </label>
+                    <input id="edittextConfirmPassword"
+                           type="password"
+                           @bind="signupConfirmPassword"
+                           placeholder="••••••••"
+                           class="w-full bg-slate-800/90 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50" />
+                </div>
+
+                <div class="pt-2">
+                    <button id="buttonSignUp"
+                            type="button"
+                            @onclick="HandleSignUp"
+                            class="w-full py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-600/30 transition transform active:scale-95 flex items-center justify-center gap-2 text-sm">
+                        <span>🛡️</span> Begin Your Quest
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Class Preview Cards Section -->
+    <div class="mt-12 max-w-4xl w-full relative z-10">
+        <div class="text-center mb-4">
+            <span class="text-xs uppercase font-bold text-purple-400 tracking-wider">RPG Progression</span>
+            <h3 class="text-sm font-semibold text-slate-300">Unlock Specialized Class Roles at Level 3</h3>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <!-- Warrior -->
+            <div id="cardClassWarrior" class="bg-slate-900/80 rounded-2xl p-4 border border-red-500/30 hover:border-red-500/60 transition shadow-lg hover:scale-105 transform">
+                <div class="text-3xl mb-2">⚔️</div>
+                <h4 class="font-bold text-white text-sm">Warrior</h4>
+                <p class="text-xs text-red-400 font-semibold">Crammer</p>
+                <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                    Deals <strong>+50% bonus damage</strong> on Hard and Exam-level homework quests. Perfect for tackling daunting projects.
+                </p>
+            </div>
+
+            <!-- Mage -->
+            <div id="cardClassMage" class="bg-slate-900/80 rounded-2xl p-4 border border-blue-500/30 hover:border-blue-500/60 transition shadow-lg hover:scale-105 transform">
+                <div class="text-3xl mb-2">🔮</div>
+                <h4 class="font-bold text-white text-sm">Mage</h4>
+                <p class="text-xs text-blue-400 font-semibold">Scholar</p>
+                <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                    Earns <strong>+30% bonus XP & MP generation</strong> from Pomodoro Focus sessions. Harness deep work into raw arcane power.
+                </p>
+            </div>
+
+            <!-- Healer -->
+            <div id="cardClassHealer" class="bg-slate-900/80 rounded-2xl p-4 border border-emerald-500/30 hover:border-emerald-500/60 transition shadow-lg hover:scale-105 transform">
+                <div class="text-3xl mb-2">💚</div>
+                <h4 class="font-bold text-white text-sm">Healer</h4>
+                <p class="text-xs text-emerald-400 font-semibold">Support</p>
+                <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                    Can spend MP to <strong>restore party members' HP</strong> before Boss midnight retaliation attacks. The ultimate team player.
+                </p>
+            </div>
+
+            <!-- Rogue -->
+            <div id="cardClassRogue" class="bg-slate-900/80 rounded-2xl p-4 border border-amber-500/30 hover:border-amber-500/60 transition shadow-lg hover:scale-105 transform">
+                <div class="text-3xl mb-2">🗡️</div>
+                <h4 class="font-bold text-white text-sm">Rogue</h4>
+                <p class="text-xs text-amber-400 font-semibold">Sprinter</p>
+                <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                    Gains <strong>+25% bonus Gold drops</strong> and boosted streak multipliers. Perfect for high-volume rapid task completion.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string activeTab = "login";
+    private string loginEmail = "helge@cit.edu";
+    private string loginPassword = "password123";
+
+    private string signupUsername = "";
+    private string signupEmail = "";
+    private string signupPassword = "";
+    private string signupConfirmPassword = "";
+
+    private void HandleLogin()
+    {
+        Nav.NavigateTo("/");
+    }
+
+    private void HandleSignUp()
+    {
+        Nav.NavigateTo("/");
+    }
+}

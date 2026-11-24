@@ -1,0 +1,137 @@
+@inject GameState Game
+
+<div class="bg-slate-900/90 rounded-2xl border border-slate-700/80 shadow-xl backdrop-blur-sm overflow-hidden flex flex-col h-[calc(100vh-100px)] min-h-[640px]">
+    <!-- Tab & Action Header -->
+    <div class="p-4 bg-slate-800/40 border-b border-slate-700/70 flex items-center justify-between gap-3">
+        <!-- Tabs -->
+        <div class="flex items-center gap-2 bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+            <button id="tabDailies"
+                    @onclick='() => activeTab = "daily"'
+                    class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 @(activeTab == "daily" ? "bg-purple-600 text-white shadow-md shadow-purple-600/30" : "text-slate-400 hover:text-white")">
+                <span>📋</span> Dailies (@DailiesCount)
+            </button>
+            <button id="tabQuests"
+                    @onclick='() => activeTab = "quest"'
+                    class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 @(activeTab == "quest" ? "bg-purple-600 text-white shadow-md shadow-purple-600/30" : "text-slate-400 hover:text-white")">
+                <span>📜</span> Quests (@QuestsCount)
+            </button>
+        </div>
+
+        <!-- Add Task Button -->
+        <button id="buttonAddTask"
+                @onclick="OpenAddModal"
+                class="px-3.5 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-purple-600/25 transition flex items-center gap-1.5 transform active:scale-95">
+            <span>+</span> Add Quest
+        </button>
+    </div>
+
+    <!-- Subheader summary -->
+    <div class="px-5 py-2.5 bg-slate-950/40 border-b border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+        @if (activeTab == "daily")
+        {
+            <span>⚠️ Complete daily habits before midnight to avert Boss retaliation!</span>
+            <span class="text-amber-400 font-semibold">Streak Multiplier: Active</span>
+        }
+        else
+        {
+            <span>⚔️ Completing assignments deals direct DMG to the Boss!</span>
+            <span class="text-purple-400 font-semibold">Tiered Rewards</span>
+        }
+    </div>
+
+    <!-- Task List (Scrollable) -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-2.5">
+        @if (!FilteredTasks.Any())
+        {
+            <div class="flex flex-col items-center justify-center py-16 text-center">
+                <span class="text-4xl mb-3">🛡️</span>
+                <p class="text-white font-semibold text-sm">No @(activeTab == "daily" ? "dailies" : "quests") found</p>
+                <p class="text-slate-500 text-xs mt-1 max-w-xs">
+                    @(activeTab == "daily" ? "Add recurring study habits like flashcards, readings, or attendance." : "Add upcoming homework, lab submissions, or exam prep goals.")
+                </p>
+                <button @onclick="OpenAddModal" class="mt-4 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-purple-400 text-xs rounded-xl font-semibold border border-purple-500/30">
+                    Create Your First Task
+                </button>
+            </div>
+        }
+        else
+        {
+            @foreach (var task in FilteredTasks)
+            {
+                <TaskItemCard @key="task.Id"
+                              Task="task"
+                              OnComplete="HandleComplete"
+                              OnEdit="OpenEditModal"
+                              OnDelete="HandleDelete" />
+            }
+        }
+    </div>
+
+    <!-- Quick Footer Tip -->
+    <div class="p-3 bg-slate-950/60 border-t border-slate-800 text-center text-[11px] text-slate-500">
+        Warrior deals +50% on Hard/Exam • Rogue earns +25% Gold • Mage generates +30% Pomodoro XP
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+@if (showModal)
+{
+    <TaskModal EditTask="editingTask"
+               OnSave="HandleSave"
+               OnCancel="() => showModal = false" />
+}
+
+@code {
+    private string activeTab = "quest";
+    private bool showModal = false;
+    private TaskItem? editingTask;
+
+    private int DailiesCount => Game.Tasks.Count(t => t.TaskType == TaskType.Daily && !t.IsCompleted);
+    private int QuestsCount => Game.Tasks.Count(t => t.TaskType == TaskType.Quest && !t.IsCompleted);
+
+    private IEnumerable<TaskItem> FilteredTasks =>
+        Game.Tasks
+            .Where(t => activeTab == "daily" ? t.TaskType == TaskType.Daily : t.TaskType == TaskType.Quest)
+            .OrderBy(t => t.IsCompleted)
+            .ThenBy(t => t.DueDate ?? DateTime.MaxValue)
+            .ThenByDescending(t => t.Difficulty);
+
+    private void OpenAddModal()
+    {
+        editingTask = new TaskItem
+        {
+            TaskType = activeTab == "daily" ? TaskType.Daily : TaskType.Quest
+        };
+        showModal = true;
+    }
+
+    private void OpenEditModal(TaskItem task)
+    {
+        editingTask = task;
+        showModal = true;
+    }
+
+    private void HandleComplete(Guid taskId)
+    {
+        Game.CompleteTask(taskId);
+    }
+
+    private void HandleDelete(Guid taskId)
+    {
+        Game.DeleteTask(taskId);
+    }
+
+    private void HandleSave(TaskItem task)
+    {
+        var existing = Game.Tasks.FirstOrDefault(t => t.Id == task.Id);
+        if (existing != null)
+        {
+            Game.UpdateTask(task);
+        }
+        else
+        {
+            Game.AddTask(task);
+        }
+        showModal = false;
+    }
+}

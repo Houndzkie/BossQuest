@@ -1,0 +1,162 @@
+@inject GameState Game
+
+<div class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden p-6 space-y-5">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">🛡️</span>
+                <div>
+                    <h3 class="text-base font-bold text-white">Party Headquarters</h3>
+                    <p class="text-xs text-slate-400">Co-op study group & boss raid party</p>
+                </div>
+            </div>
+            <button @onclick="() => OnClose.InvokeAsync()" class="text-slate-400 hover:text-white text-lg">
+                ✕
+            </button>
+        </div>
+
+        @if (Game.CurrentParty != null)
+        {
+            <!-- In Party View -->
+            <div class="space-y-4">
+                <!-- Party Name & Invite Code -->
+                <div class="bg-slate-800/60 rounded-xl p-4 border border-slate-700/60 flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-purple-400 tracking-wider">Active Party</span>
+                        <h4 class="text-lg font-bold text-white">@Game.CurrentParty.Name</h4>
+                        <span class="text-xs text-slate-400">@(Game.CurrentParty.Members.Count) / @(Game.CurrentParty.MaxMembers) Adventurers</span>
+                    </div>
+
+                    <div class="text-right">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">Invite Code</span>
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-mono font-bold text-amber-300 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700 text-sm">
+                                @Game.CurrentParty.InviteCode
+                            </span>
+                            <button id="buttonCopyInviteCode"
+                                    @onclick="CopyInvite"
+                                    class="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs text-slate-200 transition"
+                                    title="Copy Code">
+                                @(copied ? "✓" : "📋")
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Roster -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Party Members
+                    </label>
+                    <div class="space-y-2">
+                        @foreach (var member in Game.CurrentParty.Members)
+                        {
+                            <div class="flex items-center justify-between bg-slate-800/40 rounded-xl p-2.5 border border-slate-800">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-2xl">@member.ClassIcon</span>
+                                    <div>
+                                        <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                                            @member.Username
+                                            @if (member.Id == Game.CurrentParty.LeaderId)
+                                            {
+                                                <span class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded font-semibold">LEADER</span>
+                                            }
+                                        </div>
+                                        <span class="text-[11px] text-slate-400">
+                                            Lv.@member.Level @member.Class • @member.Hp/@member.MaxHp HP
+                                        </span>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-mono text-purple-400">
+                                    🔥 @member.StreakDays d streak
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Leave Party Button -->
+                <div class="pt-2 flex justify-end">
+                    <button id="buttonLeaveParty"
+                            @onclick="() => Game.LeaveParty()"
+                            class="px-4 py-2 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 rounded-xl text-xs font-semibold transition">
+                        Leave Party
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Create or Join Party -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Create Party -->
+                <div class="bg-slate-800/60 rounded-xl p-4 border border-slate-700 space-y-3">
+                    <h4 class="text-sm font-bold text-white flex items-center gap-1.5">
+                        <span>🏰</span> Create a Party
+                    </h4>
+                    <p class="text-[11px] text-slate-400">
+                        Start a new party for your study group or class project team.
+                    </p>
+                    <input id="edittextPartyName"
+                           type="text"
+                           @bind="newPartyName"
+                           placeholder="Party Name (e.g. Study Guild)"
+                           class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50" />
+                    <button id="buttonCreateParty"
+                            @onclick="CreateParty"
+                            disabled="@string.IsNullOrWhiteSpace(newPartyName)"
+                            class="w-full py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold transition">
+                        Create Party
+                    </button>
+                </div>
+
+                <!-- Join Party -->
+                <div class="bg-slate-800/60 rounded-xl p-4 border border-slate-700 space-y-3">
+                    <h4 class="text-sm font-bold text-white flex items-center gap-1.5">
+                        <span>🔑</span> Join with Code
+                    </h4>
+                    <p class="text-[11px] text-slate-400">
+                        Enter an invite code provided by your classmate.
+                    </p>
+                    <input id="edittextInviteCode"
+                           type="text"
+                           @bind="joinInviteCode"
+                           placeholder="Invite Code (e.g. BOSS2024)"
+                           class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 uppercase" />
+                    <button id="buttonJoinParty"
+                            @onclick="JoinParty"
+                            disabled="@string.IsNullOrWhiteSpace(joinInviteCode)"
+                            class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white rounded-xl text-xs font-bold transition">
+                        Join Party
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private string newPartyName = "";
+    private string joinInviteCode = "";
+    private bool copied = false;
+
+    private void CreateParty()
+    {
+        if (string.IsNullOrWhiteSpace(newPartyName)) return;
+        Game.CreateParty(newPartyName);
+    }
+
+    private void JoinParty()
+    {
+        if (string.IsNullOrWhiteSpace(joinInviteCode)) return;
+        Game.JoinParty(joinInviteCode);
+    }
+
+    private void CopyInvite()
+    {
+        copied = true;
+    }
+}
